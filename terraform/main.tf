@@ -22,3 +22,10 @@ module "security" {
     project_name = var.project_name
     vpc_id = module.network.vpc_id
 }
+
+module "secrets" {
+    source = "./modules/secrets"
+    project_name = var.project_name
+    db_password = var.db_password
+    session_secret = var.session_secret
+}

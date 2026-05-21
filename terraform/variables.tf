@@ -37,3 +37,15 @@ variable "project_name" {
     description = "Prefix for all resource names"
     default = "iac1"
 }
+
+variable "db_password" {
+    type = string
+    description = "MySQL database password"
+    sensitive = true
+}
+
+variable "session_secret" {
+    type = string
+    description = "Express session secret"
+    sensitive = true
+}

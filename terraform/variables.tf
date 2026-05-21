@@ -55,3 +55,9 @@ variable "multi_az" {
   description = "Enable RDS Multi-AZ (true for production, false for dev)"
   default     = false
 }
+
+variable "redis_instance_size" {
+  type        = string
+  description = "Redis node size (small, medium, large)"
+  default     = "small"
+}

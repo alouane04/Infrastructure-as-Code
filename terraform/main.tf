@@ -39,3 +39,11 @@ module "database" {
     db_password = var.db_password
     multi_az = var.multi_az
 }
+
+module "cache" {
+    source = "./modules/cache"
+    project_name = var.project_name
+    private_data_subnet_ids = module.network.private_data_subnet_ids
+    redis_sg_id = module.security.redis_sg_id
+    redis_node_type = local.redis_node
+}

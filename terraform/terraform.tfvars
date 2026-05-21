@@ -17,3 +17,6 @@ project_name = "iac1"
 
 # Multi AZ
 multi_az = false
+
+# Redis instance size
+redis_instance_size = "small"

@@ -29,3 +29,13 @@ module "secrets" {
     db_password = var.db_password
     session_secret = var.session_secret
 }
+
+module "database" {
+    source = "./modules/database"
+    project_name = var.project_name
+    private_data_subnet_ids = module.network.private_data_subnet_ids
+    rds_sg_id = module.security.rds_sg_id
+    db_instance_class = local.db_instance
+    db_password = var.db_password
+    multi_az = var.multi_az
+}

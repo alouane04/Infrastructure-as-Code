@@ -14,3 +14,6 @@ alert_email = "alouane04@email.com"
 
 # Project Name
 project_name = "iac1"
+
+# Multi AZ
+multi_az = false

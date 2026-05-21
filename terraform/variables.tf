@@ -49,3 +49,9 @@ variable "session_secret" {
     description = "Express session secret"
     sensitive = true
 }
+
+variable "multi_az" {
+  type        = bool
+  description = "Enable RDS Multi-AZ (true for production, false for dev)"
+  default     = false
+}

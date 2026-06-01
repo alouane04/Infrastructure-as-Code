@@ -37,7 +37,7 @@ cd /opt/app
 
 # clone the code from git repo to the instance
 git clone https://github.com/alouane04/Infrastructure-as-Code.git /opt/app
-cd /opt/app/Infrastructure-as-Code/web-app
+cd /opt/app/web-app
 
 # copy app files ─────────────────────────────────────────
 # You'll replace this with your actual app source

@@ -66,7 +66,9 @@ module "compute" {
     db_port                   = module.database.db_port
     db_username               = module.database.db_username
     db_name                   = module.database.db_name
-    redis_url                 = module.cache.redis_url
+    # redis_url                 = module.cache.redis_url
+    redis_host  = module.cache.redis_host
+    redis_port  = module.cache.redis_port
 }
 
 module "loadbalancer" {

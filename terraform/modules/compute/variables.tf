@@ -64,6 +64,14 @@ variable "db_name" {
   type = string
 }
 
-variable "redis_url" {
+# variable "redis_url" {
+#   type = string
+# }
+
+variable "redis_host" {
+  type = string
+}
+
+variable "redis_port" {
   type = string
 }

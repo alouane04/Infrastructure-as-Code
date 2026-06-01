@@ -27,6 +27,7 @@ export class TodosController {
     return {
       username: session.user.username,
       todos: await this.todosService.findAllByUserId(+userId),
+      serverIp: process.env.SERVER_IP || 'localhost',
     };
   }
 

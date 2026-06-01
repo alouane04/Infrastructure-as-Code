@@ -35,6 +35,10 @@ PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
 mkdir -p /opt/app
 cd /opt/app
 
+# clone the code from git repo to the instance
+git clone https://github.com/alouane04/Infrastructure-as-Code.git /opt/app
+cd /opt/app/Infrastructure-as-Code/web-app
+
 # copy app files ─────────────────────────────────────────
 # You'll replace this with your actual app source
 # For now we create a placeholder env file
@@ -57,7 +61,7 @@ LOG_LEVEL=verbose
 EOF
 
 # install and start app ──────────────────────────────────
-npm install --production
+npm install --production --legacy-peer-deps
 npm run build
 npm run start:prod &
 

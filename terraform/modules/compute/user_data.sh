@@ -8,8 +8,8 @@ apt-get upgrade -y
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs
 
-# install awscli for secrets
-apt-get install -y awscli
+# install git (needed to clone the app repo) and awscli for secrets
+apt-get install -y git awscli
 
 # fetch secrets
 DB_PASSWORD=$(aws secretsmanager get-secret-value \
@@ -34,7 +34,7 @@ cd /opt/repo/web-app
 cat > /opt/repo/web-app/.env << EOF
 PORT=3000
 NODE_ENV=production
-DB_INIT_SYNC=false
+DB_INIT_SYNC=true
 
 MYSQL_HOST=${db_host}
 MYSQL_PORT=${db_port}
@@ -53,7 +53,7 @@ EOF
 # install ALL deps (need devDeps to build), then build, then prune
 npm install --legacy-peer-deps
 npm run build
-npm prune --omit=dev
+npm prune --omit=dev --legacy-peer-deps
 
 # create a systemd service so it survives reboots and can be managed
 cat > /etc/systemd/system/iac1-app.service << EOF

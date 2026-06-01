@@ -13,20 +13,10 @@ data "aws_ami" "ubuntu" {
     }
 }
 
-resource "aws_key_pair" "main" {
-    key_name = "${var.project_name}-key"
-    public_key = file("~/.ssh/id_rsa.pub")
-
-    tags = {
-      Name = "${var.project_name}-key"
-    }
-}
-
 resource "aws_launch_template" "app" {
     name_prefix   = "${var.project_name}-lt-"
     image_id = data.aws_ami.ubuntu.id
     instance_type = var.app_instance_type
-    key_name = aws_key_pair.main.key_name
 
     network_interfaces {
         associate_public_ip_address = false

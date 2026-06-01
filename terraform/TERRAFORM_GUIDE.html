@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IaC-1 — Terraform Codebase Guide (A to Z)</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#161b22; --panel2:#1c2330; --line:#2a3340;
+    --text:#d7dee8; --muted:#8b97a7; --accent:#4f9cf9; --accent2:#7ee787;
+    --code-bg:#0b0f14; --kw:#ff7b72; --str:#a5d6ff; --num:#79c0ff; --com:#8b949e; --fn:#d2a8ff;
+    --red:#ff6b6b; --orange:#ffa657; --yellow:#e3b341; --green:#56d364; --blue:#58a6ff;
+    --redbg:#3a1d22; --orangebg:#3a2c1d; --yellowbg:#33301a; --greenbg:#13301c;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; font-size:16px;
+  }
+  .layout{display:flex; align-items:flex-start; max-width:1400px; margin:0 auto;}
+  nav.toc{
+    position:sticky; top:0; align-self:flex-start; width:280px; min-width:280px;
+    height:100vh; overflow-y:auto; padding:24px 18px; background:var(--panel);
+    border-right:1px solid var(--line); font-size:14px;
+  }
+  nav.toc h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:18px 0 8px;}
+  nav.toc a{display:block; color:var(--text); text-decoration:none; padding:4px 8px; border-radius:6px; margin:1px 0;}
+  nav.toc a:hover{background:var(--panel2); color:#fff;}
+  nav.toc a.sub{padding-left:20px; color:var(--muted); font-size:13px;}
+  nav.toc .brand{font-weight:700; font-size:16px; color:#fff; margin-bottom:2px;}
+  nav.toc .brand small{display:block; font-weight:400; color:var(--muted); font-size:12px;}
+  main{flex:1; min-width:0; padding:36px 48px 120px; max-width:1040px;}
+  h1{font-size:32px; margin:0 0 6px; color:#fff;}
+  h1 + .lede{color:var(--muted); font-size:18px; margin:0 0 28px;}
+  h2{font-size:25px; margin:48px 0 14px; padding-top:14px; border-top:1px solid var(--line); color:#fff;}
+  h3{font-size:19px; margin:30px 0 10px; color:var(--accent);}
+  h4{font-size:16px; margin:20px 0 6px; color:var(--accent2);}
+  p{margin:10px 0;}
+  code{font-family:"SF Mono",ui-monospace,"Cascadia Code",Menlo,Consolas,monospace; font-size:.88em;
+       background:var(--panel2); padding:1px 6px; border-radius:5px; color:#e6c07b;}
+  pre{background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:16px 18px;
+      overflow-x:auto; font-size:13.5px; line-height:1.55; margin:14px 0;}
+  pre code{background:none; padding:0; color:var(--text); font-size:inherit;}
+  .tok-kw{color:var(--kw)} .tok-str{color:var(--str)} .tok-num{color:var(--num)}
+  .tok-com{color:var(--com); font-style:italic} .tok-fn{color:var(--fn)} .tok-attr{color:#79c0ff}
+  ul,ol{margin:10px 0; padding-left:24px;} li{margin:5px 0;}
+  a{color:var(--accent);}
+  table{border-collapse:collapse; width:100%; margin:16px 0; font-size:14px;}
+  th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
+  th{background:var(--panel2); color:#fff; font-weight:600;}
+  tr:nth-child(even) td{background:rgba(255,255,255,.015);}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin:18px 0;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin:16px 0;}
+  .pill{display:inline-block; font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; letter-spacing:.02em;}
+  .ok{background:var(--greenbg); color:var(--green);}
+  .warn{background:var(--orangebg); color:var(--orange);}
+  .bad{background:var(--redbg); color:var(--red);}
+  .info{background:#15263a; color:var(--blue);}
+  .sev-red{border-left:5px solid var(--red);}
+  .sev-orange{border-left:5px solid var(--orange);}
+  .sev-yellow{border-left:5px solid var(--yellow);}
+  .sev-green{border-left:5px solid var(--green);}
+  .callout{background:var(--panel2); border:1px solid var(--line); border-left:4px solid var(--accent);
+           border-radius:8px; padding:12px 16px; margin:14px 0;}
+  .callout.danger{border-left-color:var(--red); background:var(--redbg);}
+  .callout.good{border-left-color:var(--green); background:var(--greenbg);}
+  .filetag{font-family:"SF Mono",monospace; font-size:12px; color:var(--muted); background:var(--code-bg);
+           border:1px solid var(--line); border-radius:6px; padding:2px 8px; display:inline-block; margin-bottom:8px;}
+  .diagram-wrap{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; overflow-x:auto;}
+  .kvs{font-size:14px;}
+  .kvs dt{color:var(--accent2); font-weight:600; font-family:monospace; margin-top:8px;}
+  .kvs dd{margin:0 0 4px 0; color:var(--muted);}
+  .muted{color:var(--muted);}
+  .flow-step{display:flex; gap:14px; margin:10px 0; align-items:flex-start;}
+  .flow-num{flex:none; width:30px; height:30px; border-radius:50%; background:var(--accent); color:#06121f;
+            font-weight:700; display:flex; align-items:center; justify-content:center; font-size:14px;}
+  hr{border:none; border-top:1px solid var(--line); margin:30px 0;}
+  .footer{color:var(--muted); font-size:13px; margin-top:60px; border-top:1px solid var(--line); padding-top:18px;}
+  @media (max-width:900px){
+    nav.toc{display:none;}
+    main{padding:24px 18px 80px;}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <div class="brand">IaC-1 Terraform<small>Codebase guide · A → Z</small></div>
+  <h2>Guide</h2>
+  <a href="#overview">1. Overview</a>
+  <a href="#deploy">2. How to deploy</a>
+  <a href="#diagram">3. Architecture diagram</a>
+  <a href="#root">4. Root configuration</a>
+  <a href="#root-main" class="sub">main.tf</a>
+  <a href="#root-vars" class="sub">variables.tf</a>
+  <a href="#root-locals" class="sub">locals.tf</a>
+  <a href="#root-tfvars" class="sub">terraform.tfvars</a>
+  <a href="#root-outputs" class="sub">outputs.tf</a>
+  <h2>Modules</h2>
+  <a href="#m-network" class="sub">network</a>
+  <a href="#m-security" class="sub">security</a>
+  <a href="#m-secrets" class="sub">secrets</a>
+  <a href="#m-database" class="sub">database</a>
+  <a href="#m-cache" class="sub">cache</a>
+  <a href="#m-loadbalancer" class="sub">loadbalancer</a>
+  <a href="#m-compute" class="sub">compute</a>
+  <a href="#m-monitoring" class="sub">monitoring</a>
+  <h2>Analysis</h2>
+  <a href="#flow">6. End-to-end deploy flow</a>
+  <a href="#compliance">7. Requirements compliance</a>
+  <a href="#issues">8. Issues &amp; recommendations</a>
+</nav>
+
+<main>
+
+<!-- ============ 1. OVERVIEW ============ -->
+<h1 id="overview">IaC-1 — Terraform Codebase Guide</h1>
+<p class="lede">A complete, top-to-bottom explanation of the Terraform that provisions a highly-available AWS home for the provided NestJS todo app — plus an honest audit against the project subject.</p>
+
+<div class="card">
+  <p><strong>The mission (subject scenario).</strong> Your boss handed you a USB stick with a "classic web application" and said: <em>"Put it in the cloud, and it needs to be robust when there's traffic."</em> This Terraform code is the answer: it builds an auto-scaling, load-balanced, multi-tier AWS infrastructure that hosts the app and survives instance loss and traffic spikes.</p>
+  <p style="margin-bottom:0"><strong>The shape of it.</strong> A public Application Load Balancer fronts an Auto Scaling Group of EC2 app servers running in private subnets. Those servers talk to a managed MySQL database (RDS) and a Redis cache (ElastiCache), also private. Secrets live in AWS Secrets Manager and are fetched at boot. CloudWatch watches the fleet and emails an admin via SNS when something breaks.</p>
+</div>
+
+<h3>Repository layout</h3>
+<pre><code><span class="tok-com">terraform/</span>
+├── main.tf            <span class="tok-com"># Provider + wires all 8 modules together</span>
+├── variables.tf       <span class="tok-com"># Root input variables (human-friendly)</span>
+├── locals.tf          <span class="tok-com"># Friendly-name → AWS-value lookup maps</span>
+├── terraform.tfvars   <span class="tok-com"># The end-user's editable settings</span>
+├── outputs.tf         <span class="tok-com"># app_url</span>
+└── modules/
+    ├── network/        <span class="tok-com"># VPC, subnets, IGW, NAT, route tables</span>
+    ├── security/       <span class="tok-com"># Security groups (the firewall chain)</span>
+    ├── secrets/        <span class="tok-com"># Secrets Manager + IAM role/profile</span>
+    ├── database/       <span class="tok-com"># RDS MySQL 8.0</span>
+    ├── cache/          <span class="tok-com"># ElastiCache Redis 7</span>
+    ├── loadbalancer/   <span class="tok-com"># ALB, target group, listener</span>
+    ├── compute/        <span class="tok-com"># Launch template, ASG, scaling, user_data.sh</span>
+    └── monitoring/     <span class="tok-com"># CloudWatch alarms → SNS email</span></code></pre>
+
+<!-- ============ 2. DEPLOY ============ -->
+<h2 id="deploy">2. How to deploy</h2>
+<p>The whole stack comes up with three commands. The two secrets are <strong>never</strong> stored in a file — they are passed on the command line at apply time (or via <code>TF_VAR_</code> environment variables).</p>
+
+<pre><code><span class="tok-com"># 1. Download the AWS provider and initialise the working dir</span>
+<span class="tok-fn">terraform</span> init
+
+<span class="tok-com"># 2. Preview what will be created (optional but recommended)</span>
+<span class="tok-fn">terraform</span> plan \
+  -var=<span class="tok-str">"db_password=&lt;choose-a-strong-password&gt;"</span> \
+  -var=<span class="tok-str">"session_secret=&lt;random-long-string&gt;"</span>
+
+<span class="tok-com"># 3. Build it. Type "yes" when prompted.</span>
+<span class="tok-fn">terraform</span> apply \
+  -var=<span class="tok-str">"db_password=&lt;choose-a-strong-password&gt;"</span> \
+  -var=<span class="tok-str">"session_secret=&lt;random-long-string&gt;"</span></code></pre>
+
+<p>When it finishes, Terraform prints the application URL:</p>
+<pre><code>Outputs:
+
+app_url = <span class="tok-str">"http://iac1-alb-123456789.eu-west-3.elb.amazonaws.com"</span></code></pre>
+
+<div class="callout">
+<strong>What you tune without touching code:</strong> everything in <a href="#root-tfvars"><code>terraform.tfvars</code></a> — the region (<code>"Paris"</code>), instance sizes (<code>"small"</code>/<code>"medium"</code>/<code>"large"</code>), the scaling range, the alert email, and the <code>multi_az</code> high-availability toggle. The two secrets stay on the command line.
+</div>
+
+<div class="callout danger">
+<strong>Prerequisite gotcha (see Issue #4):</strong> the compute module reads <code>~/.ssh/id_rsa.pub</code> at plan time. If that file does not exist on the machine running Terraform, <code>apply</code> fails before creating anything. Generate a key with <code>ssh-keygen</code> first, or remove that block.
+</div>
+
+<p>To tear everything down:</p>
+<pre><code><span class="tok-fn">terraform</span> destroy -var=<span class="tok-str">"db_password=..."</span> -var=<span class="tok-str">"session_secret=..."</span></code></pre>
+
+<!-- ============ 3. DIAGRAM ============ -->
+<h2 id="diagram">3. Architecture diagram</h2>
+<p>The default deployment (<code>min_instances = 2</code>, two Availability Zones). Traffic flows top to bottom; the three subnet tiers are colour-banded.</p>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 920 640" width="100%" font-family="-apple-system,Segoe UI,sans-serif" role="img" aria-label="AWS architecture diagram">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8b97a7"/>
+    </marker>
+  </defs>
+  <!-- Internet -->
+  <rect x="360" y="12" width="200" height="34" rx="8" fill="#15263a" stroke="#58a6ff"/>
+  <text x="460" y="34" fill="#58a6ff" font-size="14" text-anchor="middle" font-weight="700">🌍 Internet users</text>
+
+  <!-- VPC box -->
+  <rect x="20" y="64" width="880" height="556" rx="14" fill="none" stroke="#2a3340" stroke-width="2"/>
+  <text x="34" y="86" fill="#8b97a7" font-size="13" font-weight="700">VPC  10.0.0.0/16</text>
+
+  <!-- AZ labels -->
+  <text x="250" y="108" fill="#6b7686" font-size="12" text-anchor="middle">Availability Zone A</text>
+  <text x="670" y="108" fill="#6b7686" font-size="12" text-anchor="middle">Availability Zone B</text>
+  <line x1="460" y1="116" x2="460" y2="600" stroke="#222a35" stroke-dasharray="4 5"/>
+
+  <!-- Public tier band -->
+  <rect x="34" y="120" width="852" height="92" rx="10" fill="#0e2a1c" opacity=".5"/>
+  <text x="44" y="138" fill="#56d364" font-size="11" font-weight="700">PUBLIC SUBNETS · 10.0.1.0/24 · 10.0.2.0/24</text>
+
+  <!-- IGW -->
+  <rect x="378" y="56" width="164" height="0" />
+  <!-- NAT -->
+  <rect x="60" y="150" width="150" height="46" rx="8" fill="#161b22" stroke="#56d364"/>
+  <text x="135" y="170" fill="#d7dee8" font-size="12" text-anchor="middle">NAT Gateway</text>
+  <text x="135" y="186" fill="#8b97a7" font-size="10" text-anchor="middle">+ Elastic IP (AZ-A only)</text>
+
+  <!-- ALB spanning both AZs -->
+  <rect x="300" y="150" width="320" height="46" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="2"/>
+  <text x="460" y="170" fill="#58a6ff" font-size="13" text-anchor="middle" font-weight="700">Application Load Balancer</text>
+  <text x="460" y="186" fill="#8b97a7" font-size="10" text-anchor="middle">HTTP :80 → target group :3000 · health /health/readiness</text>
+
+  <!-- arrow internet to ALB -->
+  <line x1="460" y1="46" x2="460" y2="150" stroke="#8b97a7" marker-end="url(#arr)"/>
+
+  <!-- Private app tier band -->
+  <rect x="34" y="226" width="852" height="116" rx="10" fill="#15263a" opacity=".45"/>
+  <text x="44" y="244" fill="#58a6ff" font-size="11" font-weight="700">PRIVATE APP SUBNETS · 10.0.3.0/24 · 10.0.4.0/24  (Auto Scaling Group)</text>
+
+  <rect x="120" y="258" width="200" height="68" rx="8" fill="#161b22" stroke="#7ee787"/>
+  <text x="220" y="282" fill="#d7dee8" font-size="13" text-anchor="middle" font-weight="700">EC2 app instance</text>
+  <text x="220" y="300" fill="#8b97a7" font-size="10" text-anchor="middle">NestJS :3000 · no public IP</text>
+  <text x="220" y="315" fill="#8b97a7" font-size="10" text-anchor="middle">Ubuntu 22.04 · IAM profile</text>
+
+  <rect x="600" y="258" width="200" height="68" rx="8" fill="#161b22" stroke="#7ee787"/>
+  <text x="700" y="282" fill="#d7dee8" font-size="13" text-anchor="middle" font-weight="700">EC2 app instance</text>
+  <text x="700" y="300" fill="#8b97a7" font-size="10" text-anchor="middle">NestJS :3000 · no public IP</text>
+  <text x="700" y="315" fill="#8b97a7" font-size="10" text-anchor="middle">Ubuntu 22.04 · IAM profile</text>
+
+  <!-- ALB to instances -->
+  <line x1="400" y1="196" x2="250" y2="258" stroke="#8b97a7" marker-end="url(#arr)"/>
+  <line x1="520" y1="196" x2="670" y2="258" stroke="#8b97a7" marker-end="url(#arr)"/>
+  <!-- instances to NAT (egress) -->
+  <line x1="170" y1="258" x2="150" y2="196" stroke="#56d364" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+
+  <!-- Private data tier band -->
+  <rect x="34" y="356" width="852" height="118" rx="10" fill="#33301a" opacity=".4"/>
+  <text x="44" y="374" fill="#e3b341" font-size="11" font-weight="700">PRIVATE DATA SUBNETS · 10.0.5.0/24 · 10.0.6.0/24  (no internet route)</text>
+
+  <rect x="150" y="392" width="240" height="64" rx="8" fill="#161b22" stroke="#ffa657"/>
+  <text x="270" y="416" fill="#d7dee8" font-size="13" text-anchor="middle" font-weight="700">RDS MySQL 8.0</text>
+  <text x="270" y="434" fill="#8b97a7" font-size="10" text-anchor="middle">:3306 · encrypted · Multi-AZ toggle</text>
+
+  <rect x="530" y="392" width="240" height="64" rx="8" fill="#161b22" stroke="#ffa657"/>
+  <text x="650" y="416" fill="#d7dee8" font-size="13" text-anchor="middle" font-weight="700">ElastiCache Redis 7</text>
+  <text x="650" y="434" fill="#8b97a7" font-size="10" text-anchor="middle">:6379 · 1 node · LRU eviction</text>
+
+  <!-- instances to data -->
+  <line x1="240" y1="326" x2="265" y2="392" stroke="#8b97a7" marker-end="url(#arr)"/>
+  <line x1="690" y1="326" x2="655" y2="392" stroke="#8b97a7" marker-end="url(#arr)"/>
+  <line x1="320" y1="290" x2="530" y2="410" stroke="#3a4250" marker-end="url(#arr)"/>
+
+  <!-- Sidecar services -->
+  <rect x="150" y="500" width="240" height="56" rx="8" fill="#161b22" stroke="#d2a8ff"/>
+  <text x="270" y="524" fill="#d7dee8" font-size="12" text-anchor="middle" font-weight="700">🔐 Secrets Manager</text>
+  <text x="270" y="540" fill="#8b97a7" font-size="10" text-anchor="middle">db_password · session_secret</text>
+
+  <rect x="530" y="500" width="240" height="56" rx="8" fill="#161b22" stroke="#ff6b6b"/>
+  <text x="650" y="520" fill="#d7dee8" font-size="12" text-anchor="middle" font-weight="700">📈 CloudWatch → SNS</text>
+  <text x="650" y="536" fill="#8b97a7" font-size="10" text-anchor="middle">alarms → email the admin</text>
+
+  <line x1="230" y1="456" x2="255" y2="500" stroke="#d2a8ff" stroke-dasharray="3 3" marker-end="url(#arr)"/>
+  <line x1="700" y1="326" x2="660" y2="500" stroke="#3a4250" stroke-dasharray="2 4"/>
+</svg>
+</div>
+<p class="muted" style="font-size:13px">Solid arrows = request path. Green dashed = outbound internet via NAT. Purple dashed = secrets fetch at boot. The single NAT lives only in AZ-A (see Issue #5).</p>
+
+<!-- ============ 4. ROOT ============ -->
+<h2 id="root">4. Root configuration</h2>
+<p>The root directory is the "control panel." It declares the provider, defines the knobs the user turns, translates friendly names into AWS identifiers, and wires the eight modules together by passing each module's outputs into the next module's inputs.</p>
+
+<h3 id="root-main">main.tf — the wiring harness</h3>
+<span class="filetag">terraform/main.tf</span>
+<p>Pins the AWS provider (<code>~&gt; 5.0</code>), sets the region from <code>local.aws_region</code>, and instantiates every module. The interesting part is how modules feed each other — this is the dependency graph Terraform uses to order creation:</p>
+<pre><code><span class="tok-kw">module</span> <span class="tok-str">"compute"</span> {
+  source                    = <span class="tok-str">"./modules/compute"</span>
+  app_sg_id                 = module.security.app_sg_id        <span class="tok-com"># ← security</span>
+  private_app_subnet_ids    = module.network.private_app_subnet_ids  <span class="tok-com"># ← network</span>
+  ec2_instance_profile_name = module.secrets.ec2_instance_profile_name <span class="tok-com"># ← secrets</span>
+  target_group_arn          = module.loadbalancer.target_group_arn   <span class="tok-com"># ← loadbalancer</span>
+  db_host                   = module.database.db_host          <span class="tok-com"># ← database</span>
+  redis_url                 = module.cache.redis_url           <span class="tok-com"># ← cache</span>
+  <span class="tok-com"># ...plus secret names, sizes, scaling bounds</span>
+}</code></pre>
+<p>Because <code>compute</code> references outputs from <code>security</code>, <code>network</code>, <code>secrets</code>, <code>loadbalancer</code>, <code>database</code>, and <code>cache</code>, Terraform automatically creates those <em>first</em>. The resulting order is roughly:</p>
+<p><code>network</code> → <code>security</code> + <code>secrets</code> → <code>database</code> + <code>cache</code> + <code>loadbalancer</code> → <code>compute</code> → <code>monitoring</code>.</p>
+
+<h3 id="root-vars">variables.tf — the knobs</h3>
+<span class="filetag">terraform/variables.tf</span>
+<dl class="kvs">
+  <dt>region</dt><dd>Human-readable region name: <code>"Paris"</code>, <code>"Ireland"</code>, or <code>"Virginia"</code>.</dd>
+  <dt>app_instance_size / db_instance_size / redis_instance_size</dt><dd><code>"small"</code> / <code>"medium"</code> / <code>"large"</code>. Default <code>"small"</code>.</dd>
+  <dt>min_instances / max_instances</dt><dd>Auto Scaling bounds. Defaults 2 and 4.</dd>
+  <dt>multi_az</dt><dd><code>bool</code> — enable RDS Multi-AZ failover (true = production HA, false = cheaper). Default false.</dd>
+  <dt>alert_email</dt><dd>Where CloudWatch alarms are emailed.</dd>
+  <dt>project_name</dt><dd>Prefix for every resource name. Default <code>"iac1"</code>.</dd>
+  <dt>db_password / session_secret</dt><dd><code>sensitive = true</code>, <strong>no default</strong> — must be supplied at apply. This is what keeps them out of the repo.</dd>
+</dl>
+
+<h3 id="root-locals">locals.tf — friendly names → AWS values</h3>
+<span class="filetag">terraform/locals.tf</span>
+<p>This file is the project's answer to the subject's "use <code>Paris</code> not <code>eu-west-3</code>, <code>small</code> not <code>e2-standard-1</code>" requirement. It's pure lookup tables:</p>
+<pre><code><span class="tok-kw">locals</span> {
+  region_map = { <span class="tok-str">"Paris"</span> = <span class="tok-str">"eu-west-3"</span>, <span class="tok-str">"Ireland"</span> = <span class="tok-str">"eu-west-1"</span>, <span class="tok-str">"Virginia"</span> = <span class="tok-str">"us-east-1"</span> }
+  app_size_map = { <span class="tok-str">"small"</span> = <span class="tok-str">"t3.micro"</span>, <span class="tok-str">"medium"</span> = <span class="tok-str">"t3.small"</span>, <span class="tok-str">"large"</span> = <span class="tok-str">"t3.medium"</span> }
+  db_size_map  = { <span class="tok-str">"small"</span> = <span class="tok-str">"db.t3.micro"</span>, ... }
+  redis_size_map = { <span class="tok-str">"small"</span> = <span class="tok-str">"cache.t3.micro"</span>, ... }
+
+  aws_region   = local.region_map[var.region]          <span class="tok-com"># "Paris" → "eu-west-3"</span>
+  app_instance = local.app_size_map[var.app_instance_size]
+  db_instance  = local.db_size_map[var.db_instance_size]
+  redis_node   = local.redis_size_map[var.redis_instance_size]
+}</code></pre>
+
+<h3 id="root-tfvars">terraform.tfvars — the end-user's settings</h3>
+<span class="filetag">terraform/terraform.tfvars</span>
+<p>The one file a non-expert edits. It sets non-secret values; Terraform loads it automatically. Note that <code>db_password</code> and <code>session_secret</code> are deliberately <strong>absent</strong> here.</p>
+<pre><code>region            = <span class="tok-str">"Paris"</span>
+app_instance_size = <span class="tok-str">"small"</span>
+db_instance_size  = <span class="tok-str">"small"</span>
+min_instances     = <span class="tok-num">2</span>
+max_instances     = <span class="tok-num">4</span>
+alert_email       = <span class="tok-str">"alouane04@email.com"</span>
+project_name      = <span class="tok-str">"iac1"</span>
+multi_az          = <span class="tok-kw">false</span>
+redis_instance_size = <span class="tok-str">"small"</span></code></pre>
+
+<h3 id="root-outputs">outputs.tf</h3>
+<span class="filetag">terraform/outputs.tf</span>
+<p>A single output, <code>app_url</code>, built from the ALB DNS name so the user knows where to point their browser the moment <code>apply</code> finishes.</p>
+
+<!-- ============ 5. MODULES ============ -->
+<h2 id="modules" style="border:none;padding:0;margin-top:48px">5. Module-by-module walkthrough</h2>
+
+<!-- network -->
+<h3 id="m-network">📦 network</h3>
+<span class="filetag">modules/network/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> the foundation everything else sits in — one VPC, three tiers of subnets across two AZs, and the routing that decides who can reach the internet.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>aws_vpc.main</code> — <code>10.0.0.0/16</code>, DNS hostnames + support enabled.</li>
+  <li><strong>Public subnets</strong> (<code>10.0.1/2.0/24</code>) — host the ALB and NAT Gateway; <code>map_public_ip_on_launch = true</code>.</li>
+  <li><strong>Private app subnets</strong> (<code>10.0.3/4.0/24</code>) — host the EC2 fleet; no public IP.</li>
+  <li><strong>Private data subnets</strong> (<code>10.0.5/6.0/24</code>) — host RDS &amp; Redis; deliberately <em>no</em> route to the internet.</li>
+  <li><code>aws_internet_gateway</code> + <code>aws_eip.nat</code> + <code>aws_nat_gateway</code> (in <code>public_a</code>).</li>
+  <li>Three route tables: <em>public</em> → IGW; <em>private_app</em> → NAT; <em>private_data</em> → no default route (fully isolated).</li>
+</ul>
+<h4>Outputs</h4>
+<p><code>vpc_id</code>, <code>public_subnet_ids</code>, <code>private_app_subnet_ids</code>, <code>private_data_subnet_ids</code> — consumed by nearly every other module.</p>
+
+<!-- security -->
+<h3 id="m-security">🛡️ security</h3>
+<span class="filetag">modules/security/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> the firewall. Four security groups that form a strict chain — each tier only accepts traffic from the tier directly in front of it.</p>
+<table>
+  <tr><th>SG</th><th>Ingress allowed from</th><th>Port</th></tr>
+  <tr><td><code>alb</code></td><td>The whole internet <code>0.0.0.0/0</code></td><td>80</td></tr>
+  <tr><td><code>app</code></td><td>The ALB security group only</td><td>3000</td></tr>
+  <tr><td><code>rds</code></td><td>The app security group only</td><td>3306</td></tr>
+  <tr><td><code>redis</code></td><td>The app security group only</td><td>6379</td></tr>
+</table>
+<div class="callout good">This SG-referencing-SG pattern (rather than CIDR ranges) is exactly the "prevent access to resources that should not be publicly accessible" requirement. The database and cache are unreachable from anywhere except the app servers.</div>
+
+<!-- secrets -->
+<h3 id="m-secrets">🔐 secrets</h3>
+<span class="filetag">modules/secrets/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> store the two secrets in AWS Secrets Manager and grant the EC2 instances permission to read <em>only those two</em>.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>aws_secretsmanager_secret[.db_password / .session_secret]</code> + their <code>_version</code> resources holding the actual values (<code>recovery_window_in_days = 0</code> so re-applies aren't blocked by a deletion window).</li>
+  <li><code>aws_iam_role.ec2_role</code> — assumable by <code>ec2.amazonaws.com</code>.</li>
+  <li><code>aws_iam_policy.secrets_read</code> — allows <code>GetSecretValue</code> + <code>DescribeSecret</code>, scoped by ARN to just these two secrets (least privilege).</li>
+  <li><code>aws_iam_instance_profile.ec2_profile</code> — the wrapper EC2 wears to assume the role.</li>
+</ul>
+<p class="muted">The chain in one line: <em>EC2 instance → wears → instance profile → contains → IAM role → has → policy → allows → these two secrets.</em></p>
+<h4>Outputs</h4>
+<p><code>ec2_instance_profile_name</code>, <code>db_password_secret_name</code>, <code>session_secret_name</code> (names, not values — the values are fetched at runtime on the instance).</p>
+
+<!-- database -->
+<h3 id="m-database">🗄️ database</h3>
+<span class="filetag">modules/database/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> a managed MySQL 8.0 instance — the shared source of truth for all app servers, which is what makes "changes reflected across instances" true for data.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>aws_db_subnet_group</code> — pins RDS to the private-data subnets.</li>
+  <li><code>aws_db_parameter_group</code> (mysql8.0) — sets <code>utf8mb4</code> charset/collation.</li>
+  <li><code>aws_db_instance.main</code> — engine MySQL 8.0, <code>storage_encrypted = true</code>, 20 GB autoscaling to 100 GB, db name <code>todo_app</code>, user <code>admin</code>, <code>publicly_accessible = false</code>, <code>multi_az = var.multi_az</code>, 1-day backups, <code>skip_final_snapshot = true</code>.</li>
+</ul>
+<h4>Outputs</h4>
+<p><code>db_host</code>, <code>db_port</code>, <code>db_name</code>, <code>db_username</code>, <code>db_endpoint</code> — passed into compute so the app's <code>.env</code> can be built.</p>
+
+<!-- cache -->
+<h3 id="m-cache">⚡ cache</h3>
+<span class="filetag">modules/cache/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> a single-node Redis 7 cluster, intended as a <em>shared session store</em> so a user stays logged in regardless of which app server the ALB routes them to.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>aws_elasticache_subnet_group</code> (private-data subnets).</li>
+  <li><code>aws_elasticache_parameter_group</code> (redis7) — <code>maxmemory-policy = allkeys-lru</code>.</li>
+  <li><code>aws_elasticache_cluster.main</code> — Redis 7.0, 1 node, port 6379, no snapshots.</li>
+</ul>
+<h4>Outputs</h4>
+<p><code>redis_host</code>, <code>redis_port</code>, and a ready-made <code>redis_url</code> (<code>redis://host:6379</code>).</p>
+<div class="callout danger"><strong>Heads-up (Issue #3):</strong> this module is provisioned and its <code>redis_url</code> is injected into the app's <code>.env</code>, but the application code never connects to it. As wired today, Redis is unused. See the issues appendix.</div>
+
+<!-- loadbalancer -->
+<h3 id="m-loadbalancer">⚖️ loadbalancer</h3>
+<span class="filetag">modules/loadbalancer/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> the public entry point that spreads traffic across all healthy app instances — the subject's "distribute the load evenly" requirement.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>aws_lb.main</code> — internet-facing Application Load Balancer in the public subnets.</li>
+  <li><code>aws_lb_target_group.app</code> — port 3000, <strong>health check on <code>/health/readiness</code></strong> (healthy after 2 OKs, unhealthy after 3 fails, 30 s interval, expects HTTP 200).</li>
+  <li><code>aws_lb_listener.http</code> — listens on :80, forwards to the target group.</li>
+</ul>
+<h4>Outputs</h4>
+<p><code>target_group_arn</code> (→ compute/ASG), <code>alb_dns_name</code> (→ root <code>app_url</code>), <code>alb_arn</code> (→ monitoring).</p>
+
+<!-- compute -->
+<h3 id="m-compute">🖥️ compute</h3>
+<span class="filetag">modules/compute/{main,variables,outputs}.tf + user_data.sh</span>
+<p><strong>Purpose:</strong> the heart of the project — the self-healing, self-scaling fleet of app servers. This is where "robust under traffic" and "cattle, not pets" live.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>data.aws_ami.ubuntu</code> — newest Ubuntu 22.04 from Canonical.</li>
+  <li><code>aws_key_pair.main</code> — reads <code>~/.ssh/id_rsa.pub</code> (see Issue #4).</li>
+  <li><code>aws_launch_template.app</code> — AMI + instance type + app SG + IAM profile + the base64-encoded <code>user_data.sh</code>; <code>create_before_destroy</code>.</li>
+  <li><code>aws_autoscaling_group.app</code> — spread across both private-app subnets, registered with the ALB target group, <code>health_check_type = "ELB"</code> (the LB decides health, not just EC2 status), 120 s grace, rolling instance refresh at 50% min-healthy.</li>
+  <li><strong>Scaling policies + alarms:</strong> scale <em>up</em> +1 when CPU &gt; 70% for 2 min; scale <em>down</em> −1 when CPU &lt; 30% for 5 min.</li>
+</ul>
+<h4>user_data.sh — what each instance does at first boot</h4>
+<ol>
+  <li>Update Ubuntu, install Node.js 18 and the AWS CLI.</li>
+  <li>Fetch <code>db_password</code> and <code>session_secret</code> from Secrets Manager <em>using the instance's IAM role</em> — no credentials baked in.</li>
+  <li>Read its own private IP from the instance metadata endpoint.</li>
+  <li>Write <code>/opt/app/.env</code> with DB connection, <code>REDIS_URL</code>, <code>SESSION_SECRET</code>, and <code>SERVER_IP</code>.</li>
+  <li><code>npm install --production &amp;&amp; npm run build &amp;&amp; npm run start:prod &amp;</code>.</li>
+</ol>
+<h4>Outputs</h4>
+<p><code>asg_name</code>, <code>launch_template_id</code>.</p>
+
+<!-- monitoring -->
+<h3 id="m-monitoring">📈 monitoring</h3>
+<span class="filetag">modules/monitoring/{main,variables,outputs}.tf</span>
+<p><strong>Purpose:</strong> alert the administrator when the application misbehaves — the subject's "admin must be alerted on malfunctions" requirement.</p>
+<h4>Key resources</h4>
+<ul>
+  <li><code>aws_sns_topic.alerts</code> + email subscription to <code>var.alert_email</code> (requires confirming the email AWS sends).</li>
+  <li>Three <code>aws_cloudwatch_metric_alarm</code>s: <strong>unhealthy hosts</strong> &gt; 0, <strong>5xx errors</strong> &gt; 10/min, <strong>response time</strong> &gt; 2 s.</li>
+</ul>
+<div class="callout danger"><strong>Critical (Issue #2):</strong> these three alarms set their CloudWatch <code>LoadBalancer</code>/<code>TargetGroup</code> dimensions to the <em>full ARN</em> instead of the required <code>arn_suffix</code> form. As written they will never match a metric and will never fire. Details in the appendix.</div>
+<h4>Outputs</h4>
+<p><code>sns_topic_arn</code>.</p>
+
+<!-- ============ 6. FLOW ============ -->
+<h2 id="flow">6. End-to-end deploy flow</h2>
+<p>What actually happens between <code>terraform apply</code> and a working website:</p>
+<div class="flow-step"><div class="flow-num">1</div><div><strong>Network first.</strong> Terraform sees compute depends on everything, so it builds the VPC, subnets, IGW, NAT and route tables at the base of the graph.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div><strong>Security &amp; secrets in parallel.</strong> The four SGs are created; the two secrets are written to Secrets Manager and the IAM role/profile are built.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div><strong>Data &amp; edge in parallel.</strong> RDS MySQL and ElastiCache Redis spin up in the private-data subnets; the ALB + target group + listener come up in the public subnets.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div><strong>Compute.</strong> The launch template is rendered (it now has the DB host, Redis URL and secret names available), and the ASG launches <code>min_instances</code> EC2 servers across both AZs.</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div><strong>Each instance boots itself.</strong> <code>user_data.sh</code> installs Node, pulls the secrets via its IAM role, writes <code>.env</code>, builds the app and starts it on :3000.</div></div>
+<div class="flow-step"><div class="flow-num">6</div><div><strong>Health &amp; registration.</strong> The ALB polls <code>/health/readiness</code>; once an instance returns 200 twice it's marked healthy and starts receiving traffic.</div></div>
+<div class="flow-step"><div class="flow-num">7</div><div><strong>Monitoring + output.</strong> CloudWatch alarms attach to the ASG and ALB, and Terraform prints <code>app_url</code>. Open it → the app responds.</div></div>
+
+<!-- ============ 7. COMPLIANCE ============ -->
+<h2 id="compliance">7. Requirements compliance</h2>
+<p>Every subject requirement mapped to the code. Legend: <span class="pill ok">MET</span> <span class="pill warn">PARTIAL</span> <span class="pill bad">NOT MET</span></p>
+<table>
+  <tr><th>Subject requirement</th><th>Status</th><th>Where / why</th></tr>
+  <tr><td>App runs on ≥2 separate servers</td><td><span class="pill ok">MET</span></td><td>ASG <code>min_instances = 2</code> across two AZs.</td></tr>
+  <tr><td>Show which server serves the page</td><td><span class="pill bad">NOT MET</span></td><td><code>SERVER_IP</code> is injected into <code>.env</code> but no view displays it (Issue #3).</td></tr>
+  <tr><td>Distribute load across servers</td><td><span class="pill ok">MET</span></td><td>Application Load Balancer + target group.</td></tr>
+  <tr><td>Stay logged in across refresh</td><td><span class="pill bad">NOT MET</span></td><td>In-memory session store + per-instance random secret behind a round-robin LB (Issue #3).</td></tr>
+  <tr><td>Changes reflected across instances</td><td><span class="pill ok">MET</span></td><td>Shared RDS MySQL is the single source of truth for todos/users.</td></tr>
+  <tr><td>Resilient to instance loss / high load</td><td><span class="pill ok">MET</span></td><td>ASG self-heals via ELB health checks; CPU scaling policies.</td></tr>
+  <tr><td>Scale by adjusting instance count</td><td><span class="pill ok">MET</span></td><td>Scale-up/down policies + CPU alarms, bounded by min/max.</td></tr>
+  <tr><td>Cost optimisation + minimal-cost option</td><td><span class="pill ok">MET</span></td><td><code>small</code> sizes, single NAT, <code>multi_az = false</code> default.</td></tr>
+  <tr><td>Block access to non-public resources</td><td><span class="pill ok">MET</span></td><td>Private subnets + SG chaining; DB/Redis reachable only from app.</td></tr>
+  <tr><td>Protect secrets / none in repo</td><td><span class="pill bad">NOT MET</span></td><td>App design is correct, <strong>but committed <code>tfstate</code> leaks them in plaintext</strong> (Issue #1 — elimination case).</td></tr>
+  <tr><td>Alert admin on malfunction</td><td><span class="pill warn">PARTIAL</span></td><td>SNS + alarms exist, but dimensions are malformed so they never fire (Issue #2).</td></tr>
+  <tr><td>Modular &amp; reusable code</td><td><span class="pill ok">MET</span></td><td>Eight clean modules with explicit inputs/outputs.</td></tr>
+  <tr><td>Easy region selection (friendly name)</td><td><span class="pill ok">MET</span></td><td><code>region = "Paris"</code> via <code>locals.tf</code>.</td></tr>
+  <tr><td>Easy capacity selection (friendly name)</td><td><span class="pill ok">MET</span></td><td><code>small/medium/large</code> via <code>locals.tf</code>.</td></tr>
+  <tr><td>Editable global values, no code change</td><td><span class="pill ok">MET</span></td><td><code>terraform.tfvars</code>.</td></tr>
+  <tr><td>Infrastructure schema/diagram</td><td><span class="pill warn">PARTIAL</span></td><td>Provided here in §3; confirm a copy ships with the project deliverables.</td></tr>
+  <tr><td>Deploy with few actions, app operational after</td><td><span class="pill warn">PARTIAL</span></td><td>Three commands — but the <code>~/.ssh/id_rsa.pub</code> dependency adds a manual prerequisite (Issue #4).</td></tr>
+</table>
+
+<!-- ============ 8. ISSUES ============ -->
+<h2 id="issues">8. Issues &amp; recommendations</h2>
+<p class="muted">Severity-ordered. These are <strong>reported, not applied</strong> — the recommended fixes are for you to action.</p>
+
+<div class="card sev-red">
+  <span class="pill bad">CRITICAL · ELIMINATION CASE</span>
+  <h3 style="margin-top:10px">#1 — Secrets committed in plaintext via Terraform state</h3>
+  <p><code>terraform/terraform.tfstate</code> and <code>terraform.tfstate.backup</code> are tracked by git (confirmed with <code>git ls-files</code>), and they contain the real <code>db_password</code> and <code>session_secret</code> in cleartext (the state stores <code>secret_string</code> values verbatim). <code>.gitignore</code> only excludes <code>terraform/.terraform</code>, not the state files.</p>
+  <p><strong>Why it matters:</strong> the subject's Chapter VIII makes this an automatic <strong>−42</strong>: <em>"strictly prohibited to have one or more secrets in plain text in the repository."</em></p>
+  <p style="margin-bottom:0"><strong>Recommended fix:</strong></p>
+  <ul style="margin-top:4px">
+    <li><code>git rm --cached terraform/terraform.tfstate terraform/terraform.tfstate.backup</code></li>
+    <li>Add <code>*.tfstate</code>, <code>*.tfstate.*</code> (and <code>*.tfvars</code> if it ever holds secrets) to <code>.gitignore</code>.</li>
+    <li><strong>Rotate</strong> the leaked DB password and session secret — git history still contains them until rewritten.</li>
+    <li>Move to a remote encrypted backend (S3 with encryption + DynamoDB state lock) so state never lives in the repo.</li>
+  </ul>
+</div>
+
+<div class="card sev-red">
+  <span class="pill bad">CRITICAL</span>
+  <h3 style="margin-top:10px">#2 — CloudWatch alarms can never fire (wrong dimension format)</h3>
+  <p>In <code>modules/monitoring/main.tf</code> the alarms set <code>LoadBalancer = var.alb_arn</code> and <code>TargetGroup = var.target_group_arn</code> — full ARNs. CloudWatch's <code>AWS/ApplicationELB</code> metrics are dimensioned by the <strong>ARN suffix</strong>, e.g. <code>app/iac1-alb/abc123</code> and <code>targetgroup/iac1-tg/def456</code>, not the full ARN.</p>
+  <p><strong>Why it matters:</strong> the alarms will sit in <code>INSUFFICIENT_DATA</code> permanently and never page anyone — so the "alert the admin on malfunction" requirement is effectively unmet despite the wiring existing.</p>
+  <p style="margin-bottom:0"><strong>Recommended fix:</strong> in the loadbalancer module, expose <code>aws_lb.main.arn_suffix</code> and <code>aws_lb_target_group.app.arn_suffix</code> as new outputs, pass those into monitoring, and use them in the <code>dimensions</code> blocks.</p>
+</div>
+
+<div class="card sev-orange">
+  <span class="pill warn">HIGH</span>
+  <h3 style="margin-top:10px">#3 — Two mandatory app behaviours aren't wired through</h3>
+  <p>The infrastructure injects <code>SERVER_IP</code>, <code>REDIS_URL</code> and <code>SESSION_SECRET</code> into each instance's <code>.env</code>, but the application never consumes them:</p>
+  <ul>
+    <li><strong>Server identity not shown.</strong> No template renders <code>SERVER_IP</code>, so "make it visible which server serves the page" (VI.1) is unmet.</li>
+    <li><strong>Sessions break on refresh.</strong> <code>web-app/src/main.ts</code> uses Express's default in-memory <code>MemoryStore</code> with <code>secret: randomBytes(42)</code> generated per process. Behind the round-robin ALB, a refresh that lands on a different instance has no matching session, logging the user out. The provisioned Redis would solve this but is unused.</li>
+  </ul>
+  <p style="margin-bottom:0"><strong>Recommended fix (app side — modifying the app is explicitly permitted by the subject):</strong> wire <code>express-session</code> to a Redis store (e.g. <code>connect-redis</code>) using <code>REDIS_URL</code>, set <code>secret</code> from <code>SESSION_SECRET</code>, and surface <code>SERVER_IP</code> in a view/footer. Then the already-built Redis and shared secret start doing their job.</p>
+</div>
+
+<div class="card sev-yellow">
+  <span class="pill" style="background:var(--yellowbg);color:var(--yellow)">MEDIUM</span>
+  <h3 style="margin-top:10px">#4 — SSH key file dependency breaks portable deploys</h3>
+  <p><code>modules/compute/main.tf</code> does <code>public_key = file("~/.ssh/id_rsa.pub")</code>. On any machine without that file (CI, a teammate, a fresh laptop), <code>terraform apply</code> fails immediately. And the key is functionally useless anyway: the app SG opens no port 22, instances have no public IP, and there's no bastion — so nobody can SSH in regardless.</p>
+  <p style="margin-bottom:0"><strong>Recommended fix:</strong> either drop the key pair entirely (instances are managed cattle, not pets — use SSM Session Manager if access is needed), or make the public key a variable with a sensible default so deploys don't depend on a local file.</p>
+</div>
+
+<div class="card sev-yellow">
+  <span class="pill" style="background:var(--yellowbg);color:var(--yellow)">MEDIUM</span>
+  <h3 style="margin-top:10px">#5 — Single NAT Gateway is a single point of failure</h3>
+  <p>One NAT Gateway lives in <code>public_a</code>, and both private-app route tables point at it. If AZ-A degrades, app instances in AZ-B lose all outbound internet — meaning new instances there can't fetch secrets or run <code>npm install</code> at boot.</p>
+  <p style="margin-bottom:0"><strong>Assessment:</strong> this is a <em>defensible cost tradeoff</em> — the subject heavily emphasises cost ("less than five euros", "cattle not pets"), and a second NAT roughly doubles the standing cost. Keep it for the minimal-cost profile, but document it; for a true-HA profile, add one NAT per AZ with per-AZ route tables.</p>
+</div>
+
+<div class="card sev-green">
+  <span class="pill" style="background:var(--greenbg);color:var(--green)">MINOR / POLISH</span>
+  <h3 style="margin-top:10px">#6 — Small things worth tidying</h3>
+  <ul style="margin-bottom:0">
+    <li><strong>Placeholder alert email</strong> (<code>alouane04@email.com</code>) — set a real, monitored address, and remember to confirm the SNS subscription email.</li>
+    <li><strong>Typos in descriptions</strong> — "Enabl Multi-AZ" (database vars), "recive" (root <code>alert_email</code>). Cosmetic only.</li>
+    <li><strong>Hardcoded AZ suffixes</strong> — subnets assume <code>${region}a</code> / <code>${region}b</code> exist. True for the three supported regions, but <code>data.aws_availability_zones</code> would be more robust.</li>
+    <li><strong>Readiness check pings the DB.</strong> <code>/health/readiness</code> includes a DB ping; a brief DB blip can mark every instance unhealthy at once. Consider separating liveness (already present) from readiness for the LB.</li>
+    <li><strong>HTTP only.</strong> No TLS/HTTPS — but the subject lists HTTPS as a <em>bonus</em>, so this is fine for the mandatory part.</li>
+  </ul>
+</div>
+
+<div class="footer">
+  <p><strong>Scope of this guide:</strong> documents the Terraform under <code>terraform/</code> as it currently stands and audits it against <code>en.subject.pdf</code>. No code, configuration, or git state was modified in producing it. All recommended fixes are advisory.</p>
+</div>
+
+</main>
+</div>
+</body>
+</html>

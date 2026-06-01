@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import * as session from 'express-session';
 import { AppSessionBaseType } from './libs/data-structures/app-session.type';
 import Redis from 'ioredis';
-import RedisStore from 'connect-redis';
+import { RedisStore } from 'connect-redis';
 
 declare module 'express-session' {
   export interface SessionData extends AppSessionBaseType {}

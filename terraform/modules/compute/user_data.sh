@@ -1,20 +1,17 @@
 #!/bin/bash
-
-# stop if some command fail
 set -e
 
-# update the ubuntu
 apt-get update -y
 apt-get upgrade -y
 
-# install the nodejs 18
+# install nodejs 18
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs
 
-# install to get secrets
+# install awscli for secrets
 apt-get install -y awscli
 
-# fetch secrets from Secrets Manager ─────────────────────
+# fetch secrets
 DB_PASSWORD=$(aws secretsmanager get-secret-value \
   --secret-id ${db_password_secret_name} \
   --region ${aws_region} \
@@ -27,22 +24,14 @@ SESSION_SECRET=$(aws secretsmanager get-secret-value \
   --query SecretString \
   --output text)
 
-# get this instance's private IP ─────────────────────────
 PRIVATE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
 
+# clone repo
+git clone https://github.com/alouane04/Infrastructure-as-Code.git /opt/repo
+cd /opt/repo/web-app
 
-# create work folder
-mkdir -p /opt/app
-cd /opt/app
-
-# clone the code from git repo to the instance
-git clone https://github.com/alouane04/Infrastructure-as-Code.git /opt/app
-cd /opt/app/web-app
-
-# copy app files ─────────────────────────────────────────
-# You'll replace this with your actual app source
-# For now we create a placeholder env file
-cat > /opt/app/.env << EOF
+# write .env in the RIGHT place (next to package.json)
+cat > /opt/repo/web-app/.env << EOF
 PORT=3000
 NODE_ENV=production
 DB_INIT_SYNC=false
@@ -61,9 +50,33 @@ SERVER_IP=$PRIVATE_IP
 LOG_LEVEL=verbose
 EOF
 
-# install and start app ──────────────────────────────────
-npm install --production --legacy-peer-deps
+# install ALL deps (need devDeps to build), then build, then prune
+npm install --legacy-peer-deps
 npm run build
-npm run start:prod &
+npm prune --omit=dev
+
+# create a systemd service so it survives reboots and can be managed
+cat > /etc/systemd/system/iac1-app.service << EOF
+[Unit]
+Description=IAC1 Web App
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/repo/web-app
+ExecStart=/usr/bin/node dist/main
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/repo/web-app/.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable iac1-app
+systemctl start iac1-app
 
 echo "App started successfully"

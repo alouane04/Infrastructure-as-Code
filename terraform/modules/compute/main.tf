@@ -48,8 +48,6 @@ resource "aws_launch_template" "app" {
         # redis_url = var.redis_url
         redis_host  = var.redis_host
         redis_port  = var.redis_port
-        app_bucket  = var.app_bucket
-        app_package = var.app_package
     }))
 
     tag_specifications {

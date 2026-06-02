@@ -4,7 +4,7 @@ import { join } from 'path';
 import { AppModule } from './app.module';
 import * as session from 'express-session';
 import { AppSessionBaseType } from './libs/data-structures/app-session.type';
-import Redis from 'ioredis';
+import { createClient } from 'redis';
 import { RedisStore } from 'connect-redis';
 
 declare module 'express-session' {
@@ -14,19 +14,23 @@ declare module 'express-session' {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Redis client (ioredis)
-  const redisClient = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
+  // Redis client (node-redis v5 — the API connect-redis v9 expects)
+  const redisClient = createClient({
+    socket: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+    },
   });
 
   redisClient.on('error', (err) => {
     console.error('Redis error:', err);
   });
 
-  // Redis session store (connect-redis v9 + ioredis cast)
-  const redisStore = new (RedisStore as any)({
-    client: redisClient as any,
+  await redisClient.connect();
+
+  // Redis session store (connect-redis v9 + node-redis v5)
+  const redisStore = new RedisStore({
+    client: redisClient,
     prefix: 'sess:',
   });
 
